@@ -46,13 +46,22 @@ export interface BackendJob {
   startDate?: string | null;
   deadlineDate: string;
   examDate?: string | null;
-  status: 'Admit Card / Active' | 'Pending / Scrutiny' | 'Result Announced' | 'Rejected / Cancelled';
+  status:
+    | 'Application Open / Active'
+    | 'Admit Card / Active'
+    | 'Answer Key Out'
+    | 'Pending / Scrutiny'
+    | 'Result Announced'
+    | 'Rejected / Cancelled';
   cutoffMarks?: BackendCategoryBreakdown;
   gazetteRef: string;
   admitCardsReleased?: number;
   officialWebsiteUrl: string;
   applyOnlineUrl?: string | null;
   officialNoticePdfUrl?: string | null;
+  admitCardUrl?: string | null;
+  answerKeyUrl?: string | null;
+  syllabusUrl?: string | null;
   selectionStages?: string[];
   stateCode: string;
   educationTier?: string;
@@ -191,34 +200,56 @@ const API_BASE_URL =
   (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/+$/, '') ||
   'http://localhost:4000/api/v1';
 
-const DEFAULT_TIMEOUT_MS = 3500;
+const DEFAULT_TIMEOUT_MS = 5000;
+const inFlightRequests = new Map<string, Promise<unknown>>();
 
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const url = `${API_BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+  const method = (options.method || 'GET').toUpperCase();
+
+  // Deduplicate identical in-flight GET requests
+  if (method === 'GET') {
+    const existing = inFlightRequests.get(url);
+    if (existing) {
+      return existing as Promise<T>;
+    }
+  }
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
 
-  try {
-    const res = await fetch(url, {
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
-      ...options,
-      signal: controller.signal,
-    });
+  const fetchPromise = (async () => {
+    try {
+      const res = await fetch(url, {
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+          ...options.headers,
+        },
+        ...options,
+        signal: controller.signal,
+      });
 
-    if (!res.ok) {
-      throw new Error(`HTTP Error: ${res.status} ${res.statusText}`);
+      if (!res.ok) {
+        throw new Error(`HTTP Error: ${res.status} ${res.statusText}`);
+      }
+
+      const json = await res.json();
+      // The backend uses TransformInterceptor: { success: true, statusCode: 200, data: T }
+      return (json && typeof json === 'object' && 'data' in json ? json.data : json) as T;
+    } finally {
+      clearTimeout(timer);
+      if (method === 'GET') {
+        inFlightRequests.delete(url);
+      }
     }
+  })();
 
-    const json = await res.json();
-    // The backend uses TransformInterceptor: { success: true, statusCode: 200, data: T }
-    return (json && typeof json === 'object' && 'data' in json ? json.data : json) as T;
-  } finally {
-    clearTimeout(timer);
+  if (method === 'GET') {
+    inFlightRequests.set(url, fetchPromise);
   }
+
+  return fetchPromise as Promise<T>;
 }
 
 export const publicApi = {

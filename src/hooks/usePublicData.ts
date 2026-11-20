@@ -18,6 +18,39 @@ import {
   mapBackendResultToQuickLink,
 } from '../services/mappers';
 
+/**
+ * Attaches smart window focus / visibility revalidation with a relaxed background sync timer.
+ * Replaces aggressive rapid polling floods with high-efficiency event-driven updates.
+ */
+function attachSmartRevalidation(fetchFn: () => void, intervalMs = 90000): () => void {
+  fetchFn();
+
+  const handleRevalidate = () => {
+    if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+      fetchFn();
+    }
+  };
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('focus', handleRevalidate);
+    document.addEventListener('visibilitychange', handleRevalidate);
+  }
+
+  const timer = setInterval(() => {
+    if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+      fetchFn();
+    }
+  }, intervalMs);
+
+  return () => {
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('focus', handleRevalidate);
+      document.removeEventListener('visibilitychange', handleRevalidate);
+    }
+    clearInterval(timer);
+  };
+}
+
 // ─── 1. usePublicJobs Hook ────────────────────────────────────────────────────
 export interface UsePublicJobsResult {
   jobs: JobPosting[];
@@ -62,9 +95,7 @@ export function usePublicJobs(params: SearchJobsParams = {}): UsePublicJobsResul
   }, [params.search, params.qualification, params.state, params.category, params.status, params.sort, params.page, params.limit]);
 
   useEffect(() => {
-    fetchJobs();
-    const interval = setInterval(fetchJobs, 8000);
-    return () => clearInterval(interval);
+    return attachSmartRevalidation(fetchJobs, 90000);
   }, [fetchJobs]);
 
   return { jobs, loading, error, isLive, total, refetch: fetchJobs };
@@ -197,9 +228,7 @@ export function useHomeSummary(): UseHomeSummaryResult {
   }, []);
 
   useEffect(() => {
-    fetchSummary();
-    const interval = setInterval(fetchSummary, 8000);
-    return () => clearInterval(interval);
+    return attachSmartRevalidation(fetchSummary, 60000);
   }, [fetchSummary]);
 
   return { summary, loading, isLive, refetch: fetchSummary };
@@ -237,9 +266,7 @@ export function useAdmitCards(): UseAdmitCardsResult {
   }, []);
 
   useEffect(() => {
-    load();
-    const interval = setInterval(load, 8000);
-    return () => clearInterval(interval);
+    return attachSmartRevalidation(load, 90000);
   }, [load]);
 
   return { items, loading, isLive };
@@ -277,9 +304,7 @@ export function useResults(): UseResultsResult {
   }, []);
 
   useEffect(() => {
-    load();
-    const interval = setInterval(load, 8000);
-    return () => clearInterval(interval);
+    return attachSmartRevalidation(load, 90000);
   }, [load]);
 
   return { items, loading, isLive };

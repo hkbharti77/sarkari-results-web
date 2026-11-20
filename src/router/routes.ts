@@ -5,8 +5,12 @@ export type AppRoute =
   | { type: 'admit-cards' }
   | { type: 'results' }
   | { type: 'answer-keys' }
+  | { type: 'syllabus' }
   | { type: 'state-jobs'; stateCode?: string }
   | { type: 'eligibility-calculator' }
+  | { type: 'privacy' }
+  | { type: 'terms' }
+  | { type: 'contact'; initialType?: string }
   | { type: 'job-detail'; jobId: string }
   | { type: 'not-found'; path: string };
 
@@ -46,8 +50,27 @@ export function parseRoute(pathname: string, searchParams: URLSearchParams): App
     return { type: 'answer-keys' };
   }
 
+  if (path === '/syllabus' || path === '/exam-pattern') {
+    return { type: 'syllabus' };
+  }
+
   if (path === '/eligibility-calculator' || path === '/calculator') {
     return { type: 'eligibility-calculator' };
+  }
+
+  if (path === '/privacy' || path === '/privacy-policy' || path === '/dpdp') {
+    return { type: 'privacy' };
+  }
+
+  if (path === '/terms' || path === '/terms-and-conditions' || path === '/terms-of-use') {
+    return { type: 'terms' };
+  }
+
+  if (path === '/contact' || path === '/contact-us' || path === '/grievance') {
+    return {
+      type: 'contact',
+      initialType: searchParams.get('type') || undefined,
+    };
   }
 
   if (path.startsWith('/state-jobs')) {

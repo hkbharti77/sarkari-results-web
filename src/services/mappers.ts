@@ -79,7 +79,7 @@ export function mapBackendJobToJobPosting(bj: BackendJob): JobPosting {
   const state = STATE_CODE_TO_NAME[bj.stateCode?.toUpperCase()] || bj.stateCode || 'Central';
 
   let status: JobStatus = 'ACTIVE';
-  if (bj.status === 'Pending / Scrutiny') {
+  if (bj.status === 'Pending / Scrutiny' || bj.status === 'Application Open / Active') {
     status = 'NEW';
   } else if (bj.status === 'Rejected / Cancelled') {
     status = 'EXPIRED';
@@ -128,9 +128,10 @@ export function mapBackendJobToJobPosting(bj: BackendJob): JobPosting {
       ? formatFriendlyDate(bj.createdAt)
       : 'Official Notification';
 
+  const gazetteOrAdvt = bj.advtNo || (bj.gazetteRef || '').replace(/^DRAFT-/i, '') || 'Advt. Notice';
   const importantDates: ImportantDate[] = [
     {
-      event: `Official Gazette Release / Application Begin (${bj.gazetteRef || 'Advt. Notice'})`,
+      event: `Official Gazette Release / Application Begin (${gazetteOrAdvt})`,
       date: releaseDate,
       isPast: true,
     },
@@ -204,11 +205,21 @@ export function mapBackendJobToJobPosting(bj: BackendJob): JobPosting {
   const noticePdf =
     bj.officialNoticePdfUrl || bj.officialWebsiteUrl || 'https://upsc.gov.in';
 
+  // Sanitize customId and advtNo so visitors never see internal "DRAFT-" prefixes
+  const cleanId = (bj.customId || '').replace(/^DRAFT-/i, '');
+  const cleanAdvtNo = (bj.advtNo || '').trim();
+  const cleanSlug = (bj.slug || cleanId.toLowerCase()).replace(/-draft-[0-9]+/i, '');
+
+  const displayShortTitle = cleanAdvtNo
+    ? `${cleanAdvtNo} · ${bj.postTitle}`
+    : `${cleanId} · ${bj.postTitle}`;
+
   return {
-    id: bj.customId,
-    slug: bj.slug || bj.customId.toLowerCase(),
+    id: cleanId,
+    advtNo: cleanAdvtNo,
+    slug: cleanSlug,
     title: `${bj.department} — ${bj.postTitle}`,
-    shortTitle: `${bj.customId} · ${bj.postTitle}`,
+    shortTitle: displayShortTitle,
     organization: bj.department,
     department: bj.ministryCode,
     category,
@@ -233,10 +244,16 @@ export function mapBackendJobToJobPosting(bj: BackendJob): JobPosting {
         ? 'RELEASED'
         : 'EXPECTED',
     resultStatus: bj.status === 'Result Announced' ? 'DECLARED' : 'AWAITED',
-    answerKeyStatus: bj.status === 'Result Announced' ? 'RELEASED' : 'NOT_APPLICABLE',
+    answerKeyStatus:
+      bj.status === 'Answer Key Out' || bj.status === 'Result Announced'
+        ? 'RELEASED'
+        : 'NOT_APPLICABLE',
     officialPdfUrl: noticePdf,
     applyOnlineUrl: applyOnline,
     officialSiteUrl: officialSite,
+    admitCardUrl: bj.admitCardUrl || ((bj.admitCardsReleased && bj.admitCardsReleased > 0) || bj.status === 'Admit Card / Active' ? applyOnline : undefined),
+    answerKeyUrl: bj.answerKeyUrl || undefined,
+    syllabusUrl: bj.syllabusUrl || noticePdf,
     importantDates,
     fees: {
       general: bj.applicationFees?.general ?? 100,

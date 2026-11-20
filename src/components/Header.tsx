@@ -50,9 +50,11 @@ export const Header: React.FC<HeaderProps> = ({
     { id: 'admit-cards', label: 'Admit Cards', path: '/admit-cards' },
     { id: 'results', label: 'Results', path: '/results', badge: 'LIVE', badgeColor: 'bg-tertiary-fixed text-on-tertiary-fixed' },
     { id: 'answer-keys', label: 'Answer Keys', path: '/answer-keys' },
+    { id: 'syllabus', label: 'Syllabus & Pattern', path: '/syllabus' },
     { id: 'state-jobs', label: 'State Jobs', path: '/state-jobs' },
     { id: 'central-jobs', label: 'Central Jobs', path: '/central-jobs' },
     { id: 'eligibility-calculator', label: 'Age & Eligibility Tool', path: '/eligibility-calculator' },
+    { id: 'contact', label: 'Help & Grievance', path: '/contact' },
   ];
 
   const quickFilters: Array<JobCategory | 'ALL'> = ['ALL', 'UPSC', 'SSC', 'Railway', 'Banking', 'Defence', 'State Police'];
@@ -148,6 +150,13 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             </div>
             <div className="flex items-center gap-3 font-medium">
+              <Link
+                to="/contact"
+                className="hidden lg:flex items-center gap-1 text-on-secondary-fixed hover:text-primary transition-colors no-underline"
+              >
+                <span className="material-symbols-outlined text-[14px]">support_agent</span>
+                <span>Helpdesk &amp; Grievance</span>
+              </Link>
               <span className="hidden md:flex items-center gap-1 text-on-secondary-fixed">
                 <span className="material-symbols-outlined text-[14px]">send</span> 1.2M+ Alerts
               </span>

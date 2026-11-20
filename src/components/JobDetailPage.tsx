@@ -10,10 +10,54 @@ interface JobDetailPageProps {
 export const JobDetailPage: React.FC<JobDetailPageProps> = ({ job, onBack }) => {
   const [openFaqIndices, setOpenFaqIndices] = useState<number[]>([0]);
 
+  const [isSaved, setIsSaved] = useState<boolean>(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('bharatrojgar_saved_jobs') || '[]');
+      return Array.isArray(saved) && saved.includes(job.id);
+    } catch {
+      return false;
+    }
+  });
+
   const toggleFaq = (index: number) => {
     setOpenFaqIndices((prev) =>
       prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]
     );
+  };
+
+  const handleToggleSave = () => {
+    try {
+      const saved: string[] = JSON.parse(localStorage.getItem('bharatrojgar_saved_jobs') || '[]');
+      let updated: string[];
+      if (saved.includes(job.id)) {
+        updated = saved.filter((id) => id !== job.id);
+        setIsSaved(false);
+      } else {
+        updated = [...saved, job.id];
+        setIsSaved(true);
+      }
+      localStorage.setItem('bharatrojgar_saved_jobs', JSON.stringify(updated));
+    } catch (e) {
+      console.warn('Could not save job to localStorage', e);
+    }
+  };
+
+  const currentUrl =
+    typeof window !== 'undefined'
+      ? window.location.href
+      : `http://localhost:5173/job/${job.id}`;
+  const shareText = `*${job.title}*\nTotal Vacancies: ${job.totalVacancies.toLocaleString('en-IN')}\nLast Date: ${job.lastDate}\nCheck official notification & apply online here:\n${currentUrl}`;
+
+  const handleWhatsAppShare = () => {
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`, '_blank');
+  };
+
+  const handleTelegramShare = () => {
+    window.open(`https://t.me/share/url?url=${encodeURIComponent(currentUrl)}&text=${encodeURIComponent(job.title)}`, '_blank');
+  };
+
+  const handlePrint = () => {
+    window.print();
   };
   return (
     <div className="space-y-6">
@@ -40,27 +84,86 @@ export const JobDetailPage: React.FC<JobDetailPageProps> = ({ job, onBack }) => 
 
       {/* TOP HERO CARD */}
       <div className="bg-surface-container-lowest p-6 rounded-xl border border-surface-container shadow-xs space-y-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="px-2.5 py-0.5 rounded bg-primary text-on-primary text-xs font-bold">
-            {job.category}
-          </span>
-          <span className="px-2.5 py-0.5 rounded bg-surface-container text-primary text-xs font-semibold">
-            {job.state}
-          </span>
-          <span className="px-2.5 py-0.5 rounded bg-emerald-100 text-emerald-800 text-xs font-bold flex items-center gap-1">
-            <span className="material-symbols-outlined text-[14px]">verified</span>
-            Official Notification Verified
-          </span>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="px-2.5 py-0.5 rounded bg-primary text-on-primary text-xs font-bold">
+              {job.category}
+            </span>
+            <span className="px-2.5 py-0.5 rounded bg-surface-container text-primary text-xs font-semibold">
+              {job.state}
+            </span>
+            <span className="px-2.5 py-0.5 rounded bg-emerald-100 text-emerald-800 text-xs font-bold flex items-center gap-1">
+              <span className="material-symbols-outlined text-[14px]">verified</span>
+              Official Notification Verified
+            </span>
+          </div>
+
+          {/* SOCIAL SHARING & BOOKMARK ACTIONS */}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleToggleSave}
+              title={isSaved ? 'Remove from saved jobs' : 'Save this job for quick access'}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 border shadow-2xs ${
+                isSaved
+                  ? 'bg-rose-50 border-rose-300 text-rose-700'
+                  : 'bg-surface-container-low border-surface-container text-on-surface hover:bg-surface-container'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[16px] text-rose-600">
+                {isSaved ? 'favorite' : 'favorite_border'}
+              </span>
+              <span>{isSaved ? 'Saved' : 'Save Job'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleWhatsAppShare}
+              title="Share job details on WhatsApp"
+              className="px-3 py-1.5 rounded-lg bg-[#25D366] hover:bg-[#1EBE5D] text-white text-xs font-bold transition-colors flex items-center gap-1 shadow-2xs"
+            >
+              <span className="material-symbols-outlined text-[16px]">share</span>
+              <span>WhatsApp</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleTelegramShare}
+              title="Share to Telegram channel or group"
+              className="px-3 py-1.5 rounded-lg bg-[#0088CC] hover:bg-[#0077B5] text-white text-xs font-bold transition-colors flex items-center gap-1 shadow-2xs"
+            >
+              <span className="material-symbols-outlined text-[16px]">send</span>
+              <span>Telegram</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handlePrint}
+              title="Print notification or save as PDF"
+              className="px-3 py-1.5 rounded-lg bg-surface-container-low hover:bg-surface-container text-primary text-xs font-bold transition-colors border border-surface-container flex items-center gap-1 shadow-2xs"
+            >
+              <span className="material-symbols-outlined text-[16px]">print</span>
+              <span>Print</span>
+            </button>
+          </div>
         </div>
 
         <div className="space-y-2">
           <h1 className="text-xl sm:text-2xl font-extrabold text-primary leading-tight">
             {job.title}
           </h1>
-          <p className="text-xs sm:text-sm text-on-surface-variant font-medium">
-            <strong>Recruiting Authority:</strong> {job.organization}
-            {job.department ? ` (${job.department})` : ''}
-          </p>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs sm:text-sm text-on-surface-variant font-medium">
+            <p>
+              <strong>Recruiting Authority:</strong> {job.organization}
+              {job.department ? ` (${job.department})` : ''}
+            </p>
+            {job.advtNo && (
+              <p className="flex items-center gap-1 font-semibold text-primary">
+                <span className="material-symbols-outlined text-[15px] text-primary">campaign</span>
+                <span><strong>Advt. No:</strong> {job.advtNo}</span>
+              </p>
+            )}
+          </div>
         </div>
 
         {/* Highlight Stats Strip */}
@@ -344,7 +447,7 @@ export const JobDetailPage: React.FC<JobDetailPageProps> = ({ job, onBack }) => 
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           <a
             href={job.applyOnlineUrl}
             target="_blank"
@@ -354,25 +457,78 @@ export const JobDetailPage: React.FC<JobDetailPageProps> = ({ job, onBack }) => 
             <span className="material-symbols-outlined text-[16px]">login</span>
             <span>Apply Online Portal</span>
           </a>
+
           <a
             href={job.officialPdfUrl}
             target="_blank"
             rel="noreferrer"
-            className="p-3 rounded-lg bg-surface-container-lowest text-primary text-center font-bold text-xs hover:bg-surface-container transition-colors border border-outline-variant flex items-center justify-center gap-1.5"
+            className="p-3 rounded-lg bg-surface-container-lowest text-primary text-center font-bold text-xs hover:bg-surface-container transition-colors border border-outline-variant flex items-center justify-center gap-1.5 shadow-2xs"
           >
             <span className="material-symbols-outlined text-[16px] text-rose-700">picture_as_pdf</span>
             <span>Download Official Notification</span>
           </a>
+
+          {job.admitCardUrl && (
+            <a
+              href={job.admitCardUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="p-3 rounded-lg bg-emerald-700 text-white text-center font-bold text-xs hover:bg-emerald-800 transition-colors shadow-xs flex items-center justify-center gap-1.5"
+            >
+              <span className="material-symbols-outlined text-[16px] text-amber-300">badge</span>
+              <span>Download Admit Card / Hall Ticket</span>
+            </a>
+          )}
+
+          {job.answerKeyUrl && (
+            <a
+              href={job.answerKeyUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="p-3 rounded-lg bg-amber-600 text-white text-center font-bold text-xs hover:bg-amber-700 transition-colors shadow-xs flex items-center justify-center gap-1.5"
+            >
+              <span className="material-symbols-outlined text-[16px]">key</span>
+              <span>Official Answer Key & Objections</span>
+            </a>
+          )}
+
+          {job.syllabusUrl && (
+            <a
+              href={job.syllabusUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="p-3 rounded-lg bg-indigo-700 text-white text-center font-bold text-xs hover:bg-indigo-800 transition-colors shadow-xs flex items-center justify-center gap-1.5"
+            >
+              <span className="material-symbols-outlined text-[16px]">menu_book</span>
+              <span>Download Scheme & Syllabus PDF</span>
+            </a>
+          )}
+
           <a
             href={job.officialSiteUrl}
             target="_blank"
             rel="noreferrer"
-            className="p-3 rounded-lg bg-surface-container-lowest text-primary text-center font-bold text-xs hover:bg-surface-container transition-colors border border-outline-variant flex items-center justify-center gap-1.5"
+            className="p-3 rounded-lg bg-surface-container-lowest text-primary text-center font-bold text-xs hover:bg-surface-container transition-colors border border-outline-variant flex items-center justify-center gap-1.5 shadow-2xs"
           >
             <span className="material-symbols-outlined text-[16px]">public</span>
             <span>Official Commission Website</span>
           </a>
         </div>
+      </div>
+
+      {/* CORRECTION / GRIEVANCE REPORTING STRIP */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3.5 rounded-lg bg-surface-container-lowest border border-surface-container text-xs">
+        <div className="flex items-center gap-2 text-on-surface-variant">
+          <span className="material-symbols-outlined text-[18px] text-amber-600">flag</span>
+          <span>Found an error or broken official link in this notification?</span>
+        </div>
+        <Link
+          to="/contact?type=correction"
+          className="text-primary font-bold hover:underline flex items-center gap-1 shrink-0"
+        >
+          <span>Report Correction to Editors</span>
+          <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+        </Link>
       </div>
     </div>
   );

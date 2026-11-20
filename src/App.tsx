@@ -8,6 +8,13 @@ import { JobDirectoryPage } from './components/JobDirectoryPage';
 import { JobDetailPage } from './components/JobDetailPage';
 import { AdmitCardsResultsPage } from './components/AdmitCardsResultsPage';
 import { StateJobsPage } from './components/StateJobsPage';
+import { AnswerKeysPage } from './components/AnswerKeysPage';
+import { EligibilityCalculatorPage } from './components/EligibilityCalculatorPage';
+import { SyllabusPage } from './components/SyllabusPage';
+import { PrivacyPolicyPage } from './components/PrivacyPolicyPage';
+import { TermsPage } from './components/TermsPage';
+import { ContactPage } from './components/ContactPage';
+import { DpdpCookieBanner } from './components/DpdpCookieBanner';
 import { RouterProvider, useRouter, parseRoute, Link } from './router';
 import {
   usePublicJobs,
@@ -115,6 +122,8 @@ const MainContent: React.FC = () => {
     activeTabId = 'answer-keys';
   } else if (routeMatch.type === 'eligibility-calculator') {
     activeTabId = 'eligibility-calculator';
+  } else if (routeMatch.type === 'contact') {
+    activeTabId = 'contact';
   } else if (routeMatch.type === 'home') {
     activeTabId = 'home';
   }
@@ -123,17 +132,26 @@ const MainContent: React.FC = () => {
   let selectedJob: JobPosting | undefined;
   if (routeMatch.type === 'job-detail') {
     const target = targetJobId.toLowerCase();
+    const cleanTarget = target.replace(/^draft-/i, '');
+    const matchesTarget = (j: JobPosting) => {
+      const jId = j.id.toLowerCase();
+      const jCleanId = jId.replace(/^draft-/i, '');
+      const jSlug = j.slug.toLowerCase();
+      const jCleanSlug = jSlug.replace(/-draft-[0-9]+/i, '');
+      return (
+        jId === target ||
+        jId === cleanTarget ||
+        jCleanId === cleanTarget ||
+        jSlug === target ||
+        jCleanSlug === cleanTarget ||
+        (j.advtNo && j.advtNo.toLowerCase() === target)
+      );
+    };
+
     if (isLive) {
-      // WHEN API IS LIVE: ONLY check live jobs array and single fetched job from database! NEVER mock data!
-      selectedJob =
-        jobs.find((j) => j.id.toLowerCase() === target || j.slug.toLowerCase() === target) ||
-        singleJob;
+      selectedJob = jobs.find(matchesTarget) || singleJob;
     } else {
-      // OFFLINE MODE ONLY: check offline mock jobs
-      selectedJob =
-        jobs.find((j) => j.id.toLowerCase() === target || j.slug.toLowerCase() === target) ||
-        MOCK_JOBS.find((j) => j.id.toLowerCase() === target || j.slug.toLowerCase() === target) ||
-        singleJob;
+      selectedJob = jobs.find(matchesTarget) || MOCK_JOBS.find(matchesTarget) || singleJob;
     }
   }
 
@@ -249,39 +267,32 @@ const MainContent: React.FC = () => {
             )}
 
             {routeMatch.type === 'answer-keys' && (
-              <div className="bg-surface-container-lowest p-8 rounded-xl border border-surface-container text-center space-y-3 shadow-xs">
-                <span className="material-symbols-outlined text-[48px] text-primary">key</span>
-                <h2 className="text-xl font-bold text-primary">Official Answer Keys & Objections Hub</h2>
-                <p className="text-xs text-on-surface-variant max-w-lg mx-auto">
-                  Direct official links to download provisional & final answer keys from SSC, UPSC, and State Boards with online objection windows.
-                </p>
-                <div className="pt-2">
-                  <Link
-                    to="/latest-jobs"
-                    className="inline-block px-4 py-2 bg-primary hover:bg-primary-container text-on-primary rounded-lg text-xs font-bold transition-colors no-underline"
-                  >
-                    View All Active Examinations →
-                  </Link>
-                </div>
-              </div>
+              <AnswerKeysPage
+                jobs={jobs}
+                onSelectJob={handleSelectJob}
+              />
+            )}
+
+            {routeMatch.type === 'syllabus' && (
+              <SyllabusPage
+                jobs={jobs}
+                onSelectJob={handleSelectJob}
+              />
             )}
 
             {routeMatch.type === 'eligibility-calculator' && (
-              <div className="bg-surface-container-lowest p-8 rounded-xl border border-surface-container text-center space-y-3 shadow-xs">
-                <span className="material-symbols-outlined text-[48px] text-amber-600">calculate</span>
-                <h2 className="text-xl font-bold text-primary">Age & Eligibility Calculator</h2>
-                <p className="text-xs text-on-surface-variant max-w-lg mx-auto">
-                  Enter your Date of Birth, Category (General/OBC/SC/ST/PwD), and Educational Qualification to calculate your age as on official cut-off dates and find all eligible jobs.
-                </p>
-                <div className="pt-2">
-                  <Link
-                    to="/latest-jobs"
-                    className="inline-block px-4 py-2 bg-primary hover:bg-primary-container text-on-primary rounded-lg text-xs font-bold transition-colors no-underline"
-                  >
-                    Calculate Eligible Opportunities →
-                  </Link>
-                </div>
-              </div>
+              <EligibilityCalculatorPage
+                jobs={jobs}
+                onSelectJob={handleSelectJob}
+              />
+            )}
+
+            {routeMatch.type === 'privacy' && <PrivacyPolicyPage />}
+
+            {routeMatch.type === 'terms' && <TermsPage />}
+
+            {routeMatch.type === 'contact' && (
+              <ContactPage initialType={routeMatch.initialType} />
             )}
 
             {routeMatch.type === 'not-found' && (
@@ -313,6 +324,9 @@ const MainContent: React.FC = () => {
 
       {/* GLOBAL FOOTER */}
       <Footer />
+
+      {/* DPDP ACT 2023 COMPLIANT COOKIE & PRIVACY BANNER */}
+      <DpdpCookieBanner />
     </div>
   );
 };

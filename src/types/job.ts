@@ -40,6 +40,7 @@ export interface JobFaq {
 
 export interface JobPosting {
   id: string;
+  advtNo?: string;
   slug: string;
   title: string;
   shortTitle: string;
@@ -64,6 +65,9 @@ export interface JobPosting {
   officialPdfUrl: string;
   applyOnlineUrl: string;
   officialSiteUrl: string;
+  admitCardUrl?: string;
+  answerKeyUrl?: string;
+  syllabusUrl?: string;
   importantDates: ImportantDate[];
   fees: ApplicationFee;
   breakdown: VacancyBreakdown[];
